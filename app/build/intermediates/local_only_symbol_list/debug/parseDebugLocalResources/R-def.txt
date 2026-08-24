@@ -1,0 +1,13 @@
+R_DEF: Internal format may change without notice
+local
+color accent_green
+color black
+color cream_bg
+color cream_surface
+color primary_green
+color text_dark
+color white
+string app_name
+style Theme.Echo
+style Theme.Echo.Transparent
+xml file_paths

@@ -1,0 +1,6 @@
+[
+    {
+        "merged": "com.hackathon.echo.app-debug-71:/xml_file_paths.xml.flat",
+        "source": "com.hackathon.echo.app-main-73:/xml/file_paths.xml"
+    }
+]
