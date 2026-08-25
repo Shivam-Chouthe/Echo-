@@ -24,7 +24,7 @@ class Categorizer {
     }
 
     private fun isEvent(text: String): Boolean {
-        val keywords = listOf("event", "hackathon", "workshop", "conference", "meetup", "register", "tickets", "august", "september", "october", "november", "december", "pune", "mumbai", "bangalore")
+        val keywords = listOf("event", "hackathon", "workshop", "conference", "meetup", "register", "tickets", "august", "september", "october", "november", "december")
         return keywords.any { text.contains(it) }
     }
 

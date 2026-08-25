@@ -10,6 +10,8 @@ data class EchoItem(
     val title: String,
     val category: String, // RECIPE, EVENT, TOOL, PLACE, TOPIC, TASK, NOTE
     val intent: String,
+    val summary: String? = null,
+    val action: String? = null, // OPEN_MAPS, SET_REMINDER, ADD_CALENDAR, OPEN_URL, SEARCH, NONE
     val date: String? = null,
     val location: String? = null,
     val source: String? = null,
@@ -17,7 +19,8 @@ data class EchoItem(
     val reminderAt: Long? = null,
     val status: String = "PENDING", // PENDING, ECHOED, DONE
     val sourceType: String, // "TEXT" or "IMAGE"
-    val sourceUrl: String? = null
+    val sourceUrl: String? = null,
+    val isAiRefined: Boolean = false
 ) {
     // Keep compatibility with old code if needed, but we'll migrate
     val content: String get() = rawText

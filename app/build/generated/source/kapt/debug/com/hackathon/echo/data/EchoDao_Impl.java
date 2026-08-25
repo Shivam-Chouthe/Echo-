@@ -41,7 +41,7 @@ public final class EchoDao_Impl implements EchoDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "INSERT OR REPLACE INTO `echo_items` (`id`,`rawText`,`title`,`category`,`intent`,`date`,`location`,`source`,`createdAt`,`reminderAt`,`status`,`sourceType`,`sourceUrl`) VALUES (nullif(?, 0),?,?,?,?,?,?,?,?,?,?,?,?)";
+        return "INSERT OR REPLACE INTO `echo_items` (`id`,`rawText`,`title`,`category`,`intent`,`summary`,`action`,`date`,`location`,`source`,`createdAt`,`reminderAt`,`status`,`sourceType`,`sourceUrl`,`isAiRefined`) VALUES (nullif(?, 0),?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
       }
 
       @Override
@@ -68,42 +68,54 @@ public final class EchoDao_Impl implements EchoDao {
         } else {
           statement.bindString(5, entity.getIntent());
         }
-        if (entity.getDate() == null) {
+        if (entity.getSummary() == null) {
           statement.bindNull(6);
         } else {
-          statement.bindString(6, entity.getDate());
+          statement.bindString(6, entity.getSummary());
         }
-        if (entity.getLocation() == null) {
+        if (entity.getAction() == null) {
           statement.bindNull(7);
         } else {
-          statement.bindString(7, entity.getLocation());
+          statement.bindString(7, entity.getAction());
         }
-        if (entity.getSource() == null) {
+        if (entity.getDate() == null) {
           statement.bindNull(8);
         } else {
-          statement.bindString(8, entity.getSource());
+          statement.bindString(8, entity.getDate());
         }
-        statement.bindLong(9, entity.getCreatedAt());
-        if (entity.getReminderAt() == null) {
+        if (entity.getLocation() == null) {
+          statement.bindNull(9);
+        } else {
+          statement.bindString(9, entity.getLocation());
+        }
+        if (entity.getSource() == null) {
           statement.bindNull(10);
         } else {
-          statement.bindLong(10, entity.getReminderAt());
+          statement.bindString(10, entity.getSource());
         }
-        if (entity.getStatus() == null) {
-          statement.bindNull(11);
-        } else {
-          statement.bindString(11, entity.getStatus());
-        }
-        if (entity.getSourceType() == null) {
+        statement.bindLong(11, entity.getCreatedAt());
+        if (entity.getReminderAt() == null) {
           statement.bindNull(12);
         } else {
-          statement.bindString(12, entity.getSourceType());
+          statement.bindLong(12, entity.getReminderAt());
         }
-        if (entity.getSourceUrl() == null) {
+        if (entity.getStatus() == null) {
           statement.bindNull(13);
         } else {
-          statement.bindString(13, entity.getSourceUrl());
+          statement.bindString(13, entity.getStatus());
         }
+        if (entity.getSourceType() == null) {
+          statement.bindNull(14);
+        } else {
+          statement.bindString(14, entity.getSourceType());
+        }
+        if (entity.getSourceUrl() == null) {
+          statement.bindNull(15);
+        } else {
+          statement.bindString(15, entity.getSourceUrl());
+        }
+        final int _tmp = entity.isAiRefined() ? 1 : 0;
+        statement.bindLong(16, _tmp);
       }
     };
     this.__deletionAdapterOfEchoItem = new EntityDeletionOrUpdateAdapter<EchoItem>(__db) {
@@ -122,7 +134,7 @@ public final class EchoDao_Impl implements EchoDao {
   }
 
   @Override
-  public Object insert(final EchoItem echoItem, final Continuation<? super Long> $completion) {
+  public Object insert(final EchoItem echoItem, final Continuation<? super Long> arg1) {
     return CoroutinesRoom.execute(__db, true, new Callable<Long>() {
       @Override
       @NonNull
@@ -136,11 +148,11 @@ public final class EchoDao_Impl implements EchoDao {
           __db.endTransaction();
         }
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override
-  public Object delete(final EchoItem echoItem, final Continuation<? super Unit> $completion) {
+  public Object delete(final EchoItem echoItem, final Continuation<? super Unit> arg1) {
     return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
       @Override
       @NonNull
@@ -154,7 +166,7 @@ public final class EchoDao_Impl implements EchoDao {
           __db.endTransaction();
         }
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override
@@ -172,6 +184,8 @@ public final class EchoDao_Impl implements EchoDao {
           final int _cursorIndexOfTitle = CursorUtil.getColumnIndexOrThrow(_cursor, "title");
           final int _cursorIndexOfCategory = CursorUtil.getColumnIndexOrThrow(_cursor, "category");
           final int _cursorIndexOfIntent = CursorUtil.getColumnIndexOrThrow(_cursor, "intent");
+          final int _cursorIndexOfSummary = CursorUtil.getColumnIndexOrThrow(_cursor, "summary");
+          final int _cursorIndexOfAction = CursorUtil.getColumnIndexOrThrow(_cursor, "action");
           final int _cursorIndexOfDate = CursorUtil.getColumnIndexOrThrow(_cursor, "date");
           final int _cursorIndexOfLocation = CursorUtil.getColumnIndexOrThrow(_cursor, "location");
           final int _cursorIndexOfSource = CursorUtil.getColumnIndexOrThrow(_cursor, "source");
@@ -180,6 +194,7 @@ public final class EchoDao_Impl implements EchoDao {
           final int _cursorIndexOfStatus = CursorUtil.getColumnIndexOrThrow(_cursor, "status");
           final int _cursorIndexOfSourceType = CursorUtil.getColumnIndexOrThrow(_cursor, "sourceType");
           final int _cursorIndexOfSourceUrl = CursorUtil.getColumnIndexOrThrow(_cursor, "sourceUrl");
+          final int _cursorIndexOfIsAiRefined = CursorUtil.getColumnIndexOrThrow(_cursor, "isAiRefined");
           final List<EchoItem> _result = new ArrayList<EchoItem>(_cursor.getCount());
           while (_cursor.moveToNext()) {
             final EchoItem _item;
@@ -209,6 +224,18 @@ public final class EchoDao_Impl implements EchoDao {
             } else {
               _tmpIntent = _cursor.getString(_cursorIndexOfIntent);
             }
+            final String _tmpSummary;
+            if (_cursor.isNull(_cursorIndexOfSummary)) {
+              _tmpSummary = null;
+            } else {
+              _tmpSummary = _cursor.getString(_cursorIndexOfSummary);
+            }
+            final String _tmpAction;
+            if (_cursor.isNull(_cursorIndexOfAction)) {
+              _tmpAction = null;
+            } else {
+              _tmpAction = _cursor.getString(_cursorIndexOfAction);
+            }
             final String _tmpDate;
             if (_cursor.isNull(_cursorIndexOfDate)) {
               _tmpDate = null;
@@ -253,7 +280,11 @@ public final class EchoDao_Impl implements EchoDao {
             } else {
               _tmpSourceUrl = _cursor.getString(_cursorIndexOfSourceUrl);
             }
-            _item = new EchoItem(_tmpId,_tmpRawText,_tmpTitle,_tmpCategory,_tmpIntent,_tmpDate,_tmpLocation,_tmpSource,_tmpCreatedAt,_tmpReminderAt,_tmpStatus,_tmpSourceType,_tmpSourceUrl);
+            final boolean _tmpIsAiRefined;
+            final int _tmp;
+            _tmp = _cursor.getInt(_cursorIndexOfIsAiRefined);
+            _tmpIsAiRefined = _tmp != 0;
+            _item = new EchoItem(_tmpId,_tmpRawText,_tmpTitle,_tmpCategory,_tmpIntent,_tmpSummary,_tmpAction,_tmpDate,_tmpLocation,_tmpSource,_tmpCreatedAt,_tmpReminderAt,_tmpStatus,_tmpSourceType,_tmpSourceUrl,_tmpIsAiRefined);
             _result.add(_item);
           }
           return _result;
@@ -270,7 +301,7 @@ public final class EchoDao_Impl implements EchoDao {
   }
 
   @Override
-  public Object getEchoById(final int id, final Continuation<? super EchoItem> $completion) {
+  public Object getEchoById(final int id, final Continuation<? super EchoItem> arg1) {
     final String _sql = "SELECT * FROM echo_items WHERE id = ? LIMIT 1";
     final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 1);
     int _argIndex = 1;
@@ -287,6 +318,8 @@ public final class EchoDao_Impl implements EchoDao {
           final int _cursorIndexOfTitle = CursorUtil.getColumnIndexOrThrow(_cursor, "title");
           final int _cursorIndexOfCategory = CursorUtil.getColumnIndexOrThrow(_cursor, "category");
           final int _cursorIndexOfIntent = CursorUtil.getColumnIndexOrThrow(_cursor, "intent");
+          final int _cursorIndexOfSummary = CursorUtil.getColumnIndexOrThrow(_cursor, "summary");
+          final int _cursorIndexOfAction = CursorUtil.getColumnIndexOrThrow(_cursor, "action");
           final int _cursorIndexOfDate = CursorUtil.getColumnIndexOrThrow(_cursor, "date");
           final int _cursorIndexOfLocation = CursorUtil.getColumnIndexOrThrow(_cursor, "location");
           final int _cursorIndexOfSource = CursorUtil.getColumnIndexOrThrow(_cursor, "source");
@@ -295,6 +328,7 @@ public final class EchoDao_Impl implements EchoDao {
           final int _cursorIndexOfStatus = CursorUtil.getColumnIndexOrThrow(_cursor, "status");
           final int _cursorIndexOfSourceType = CursorUtil.getColumnIndexOrThrow(_cursor, "sourceType");
           final int _cursorIndexOfSourceUrl = CursorUtil.getColumnIndexOrThrow(_cursor, "sourceUrl");
+          final int _cursorIndexOfIsAiRefined = CursorUtil.getColumnIndexOrThrow(_cursor, "isAiRefined");
           final EchoItem _result;
           if (_cursor.moveToFirst()) {
             final int _tmpId;
@@ -323,6 +357,18 @@ public final class EchoDao_Impl implements EchoDao {
             } else {
               _tmpIntent = _cursor.getString(_cursorIndexOfIntent);
             }
+            final String _tmpSummary;
+            if (_cursor.isNull(_cursorIndexOfSummary)) {
+              _tmpSummary = null;
+            } else {
+              _tmpSummary = _cursor.getString(_cursorIndexOfSummary);
+            }
+            final String _tmpAction;
+            if (_cursor.isNull(_cursorIndexOfAction)) {
+              _tmpAction = null;
+            } else {
+              _tmpAction = _cursor.getString(_cursorIndexOfAction);
+            }
             final String _tmpDate;
             if (_cursor.isNull(_cursorIndexOfDate)) {
               _tmpDate = null;
@@ -367,7 +413,11 @@ public final class EchoDao_Impl implements EchoDao {
             } else {
               _tmpSourceUrl = _cursor.getString(_cursorIndexOfSourceUrl);
             }
-            _result = new EchoItem(_tmpId,_tmpRawText,_tmpTitle,_tmpCategory,_tmpIntent,_tmpDate,_tmpLocation,_tmpSource,_tmpCreatedAt,_tmpReminderAt,_tmpStatus,_tmpSourceType,_tmpSourceUrl);
+            final boolean _tmpIsAiRefined;
+            final int _tmp;
+            _tmp = _cursor.getInt(_cursorIndexOfIsAiRefined);
+            _tmpIsAiRefined = _tmp != 0;
+            _result = new EchoItem(_tmpId,_tmpRawText,_tmpTitle,_tmpCategory,_tmpIntent,_tmpSummary,_tmpAction,_tmpDate,_tmpLocation,_tmpSource,_tmpCreatedAt,_tmpReminderAt,_tmpStatus,_tmpSourceType,_tmpSourceUrl,_tmpIsAiRefined);
           } else {
             _result = null;
           }
@@ -377,7 +427,7 @@ public final class EchoDao_Impl implements EchoDao {
           _statement.release();
         }
       }
-    }, $completion);
+    }, arg1);
   }
 
   @NonNull

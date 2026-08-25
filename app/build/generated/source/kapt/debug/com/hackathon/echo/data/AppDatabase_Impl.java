@@ -29,12 +29,12 @@ public final class AppDatabase_Impl extends AppDatabase {
   @Override
   @NonNull
   protected SupportSQLiteOpenHelper createOpenHelper(@NonNull final DatabaseConfiguration config) {
-    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(3) {
+    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(4) {
       @Override
       public void createAllTables(@NonNull final SupportSQLiteDatabase db) {
-        db.execSQL("CREATE TABLE IF NOT EXISTS `echo_items` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `rawText` TEXT NOT NULL, `title` TEXT NOT NULL, `category` TEXT NOT NULL, `intent` TEXT NOT NULL, `date` TEXT, `location` TEXT, `source` TEXT, `createdAt` INTEGER NOT NULL, `reminderAt` INTEGER, `status` TEXT NOT NULL, `sourceType` TEXT NOT NULL, `sourceUrl` TEXT)");
+        db.execSQL("CREATE TABLE IF NOT EXISTS `echo_items` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `rawText` TEXT NOT NULL, `title` TEXT NOT NULL, `category` TEXT NOT NULL, `intent` TEXT NOT NULL, `summary` TEXT, `action` TEXT, `date` TEXT, `location` TEXT, `source` TEXT, `createdAt` INTEGER NOT NULL, `reminderAt` INTEGER, `status` TEXT NOT NULL, `sourceType` TEXT NOT NULL, `sourceUrl` TEXT, `isAiRefined` INTEGER NOT NULL)");
         db.execSQL("CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)");
-        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '7beb529437ae2d752bf989c1c4669c30')");
+        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e568f73e7168bbbc3a6195b54915c940')");
       }
 
       @Override
@@ -83,12 +83,14 @@ public final class AppDatabase_Impl extends AppDatabase {
       @NonNull
       public RoomOpenHelper.ValidationResult onValidateSchema(
           @NonNull final SupportSQLiteDatabase db) {
-        final HashMap<String, TableInfo.Column> _columnsEchoItems = new HashMap<String, TableInfo.Column>(13);
+        final HashMap<String, TableInfo.Column> _columnsEchoItems = new HashMap<String, TableInfo.Column>(16);
         _columnsEchoItems.put("id", new TableInfo.Column("id", "INTEGER", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsEchoItems.put("rawText", new TableInfo.Column("rawText", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsEchoItems.put("title", new TableInfo.Column("title", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsEchoItems.put("category", new TableInfo.Column("category", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsEchoItems.put("intent", new TableInfo.Column("intent", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsEchoItems.put("summary", new TableInfo.Column("summary", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsEchoItems.put("action", new TableInfo.Column("action", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsEchoItems.put("date", new TableInfo.Column("date", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsEchoItems.put("location", new TableInfo.Column("location", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsEchoItems.put("source", new TableInfo.Column("source", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
@@ -97,6 +99,7 @@ public final class AppDatabase_Impl extends AppDatabase {
         _columnsEchoItems.put("status", new TableInfo.Column("status", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsEchoItems.put("sourceType", new TableInfo.Column("sourceType", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsEchoItems.put("sourceUrl", new TableInfo.Column("sourceUrl", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsEchoItems.put("isAiRefined", new TableInfo.Column("isAiRefined", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         final HashSet<TableInfo.ForeignKey> _foreignKeysEchoItems = new HashSet<TableInfo.ForeignKey>(0);
         final HashSet<TableInfo.Index> _indicesEchoItems = new HashSet<TableInfo.Index>(0);
         final TableInfo _infoEchoItems = new TableInfo("echo_items", _columnsEchoItems, _foreignKeysEchoItems, _indicesEchoItems);
@@ -108,7 +111,7 @@ public final class AppDatabase_Impl extends AppDatabase {
         }
         return new RoomOpenHelper.ValidationResult(true, null);
       }
-    }, "7beb529437ae2d752bf989c1c4669c30", "a5f0a422e64b8f6d3e70cecf0d774787");
+    }, "e568f73e7168bbbc3a6195b54915c940", "8a505951ca4ecff0ddd4a2884bc2f5ec");
     final SupportSQLiteOpenHelper.Configuration _sqliteConfig = SupportSQLiteOpenHelper.Configuration.builder(config.context).name(config.name).callback(_openCallback).build();
     final SupportSQLiteOpenHelper _helper = config.sqliteOpenHelperFactory.create(_sqliteConfig);
     return _helper;

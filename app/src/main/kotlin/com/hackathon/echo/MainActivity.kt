@@ -204,7 +204,7 @@ fun EchoCard(echo: EchoItem, onDelete: () -> Unit, onClick: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (isDone) "✓ DONE" else "$categoryIcon ${echo.category}",
+                    text = if (isDone) "✓ DONE" else "${if (echo.isAiRefined) "✨ " else ""}$categoryIcon ${echo.category}",
                     style = MaterialTheme.typography.labelSmall,
                     color = if (isDone) Color.Gray else PrimaryGreen,
                     fontWeight = FontWeight.Bold,
@@ -233,6 +233,15 @@ fun EchoCard(echo: EchoItem, onDelete: () -> Unit, onClick: () -> Unit) {
                 color = Color.Gray,
                 fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
             )
+            
+            if (echo.summary != null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = echo.summary,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                )
+            }
             
             if (echo.date != null || echo.location != null) {
                 Spacer(modifier = Modifier.height(12.dp))

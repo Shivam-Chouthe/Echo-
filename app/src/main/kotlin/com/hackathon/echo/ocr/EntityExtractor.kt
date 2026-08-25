@@ -32,8 +32,10 @@ class EntityExtractor {
         // Strip common date patterns from title as a secondary cleanup
         val datePatterns = listOf(
             "\\d{1,2}\\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)",
+            "(?:January|February|March|April|May|June|July|August|September|October|November|December)\\s+\\d{1,2}",
             "\\d{1,2}/\\d{1,2}(?:/\\d{2,4})?",
             "\\d{4}-\\d{2}-\\d{2}",
+            "(?:this|next)\\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)",
             "tomorrow",
             "today"
         )
@@ -66,8 +68,10 @@ class EntityExtractor {
         // Regex for dates
         val datePatterns = listOf(
             "\\d{1,2}\\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)",
+            "(?:January|February|March|April|May|June|July|August|September|October|November|December)\\s+\\d{1,2}",
             "\\d{1,2}/\\d{1,2}(?:/\\d{2,4})?",
-            "\\d{4}-\\d{2}-\\d{2}"
+            "\\d{4}-\\d{2}-\\d{2}",
+            "(?:this|next)\\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)"
         )
         
         for (patternStr in datePatterns) {
@@ -137,47 +141,106 @@ class EntityExtractor {
             }
             else -> {
                 // Try parsing month-based dates
-                val monthPattern = Pattern.compile("(\\d{1,2})\\s+(January|February|March|April|May|June|July|August|September|October|November|December)", Pattern.CASE_INSENSITIVE)
-                val matcher = monthPattern.matcher(dateStr)
+                val dayMonthPattern = Pattern.compile("(\\d{1,2})\\s+(January|February|March|April|May|June|July|August|September|October|November|December)", Pattern.CASE_INSENSITIVE)
+                val monthDayPattern = Pattern.compile("(January|February|March|April|May|June|July|August|September|October|November|December)\\s+(\\d{1,2})", Pattern.CASE_INSENSITIVE)
+                
+                var matcher = dayMonthPattern.matcher(dateStr)
+                var day: Int? = null
+                var monthName: String? = null
+                
                 if (matcher.find()) {
-                    val day = matcher.group(1)?.toIntOrNull() ?: return null
-                    val monthName = matcher.group(2)?.lowercase() ?: return null
-                    val month = when (monthName) {
-                        "january" -> Calendar.JANUARY
-                        "february" -> Calendar.FEBRUARY
-                        "march" -> Calendar.MARCH
-                        "april" -> Calendar.APRIL
-                        "may" -> Calendar.MAY
-                        "june" -> Calendar.JUNE
-                        "july" -> Calendar.JULY
-                        "august" -> Calendar.AUGUST
-                        "september" -> Calendar.SEPTEMBER
-                        "october" -> Calendar.OCTOBER
-                        "november" -> Calendar.NOVEMBER
-                        "december" -> Calendar.DECEMBER
-                        else -> -1
+                    day = matcher.group(1)?.toIntOrNull()
+                    monthName = matcher.group(2)?.lowercase()
+                } else {
+                    matcher = monthDayPattern.matcher(dateStr)
+                    if (matcher.find()) {
+                        monthName = matcher.group(1)?.lowercase()
+                        day = matcher.group(2)?.toIntOrNull()
                     }
+                }
+
+                if (day != null && monthName != null) {
+                    val month = getMonthInt(monthName)
                     if (month != -1) {
                         calendar.set(currentYear, month, day, 9, 0)
-                        
-                        val eventTime = calendar.timeInMillis
-                        val now = System.currentTimeMillis()
+                        return finalizeReminder(calendar.timeInMillis)
+                    }
+                }
 
-                        return when {
-                            // If it's a future event (more than 24h away), schedule for 1 day before
-                            eventTime > now + 86400000 -> {
-                                eventTime - 86400000 // 1 day before
-                            }
-                            // If it's today or less than 24h away, but still in future
-                            eventTime > now -> {
-                                // Schedule for 60 seconds from now for demo/testing as requested
-                                now + 60000 
-                            }
-                            else -> null // Truly in the past
+                // Try parsing "this/next [Day]"
+                val dayOfWeekPattern = Pattern.compile("(this|next)\\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)", Pattern.CASE_INSENSITIVE)
+                val dayMatcher = dayOfWeekPattern.matcher(dateStr)
+                if (dayMatcher.find()) {
+                    val relative = dayMatcher.group(1)?.lowercase()
+                    val dayName = dayMatcher.group(2)?.lowercase()
+                    val targetDay = getDayOfWeekInt(dayName)
+                    
+                    if (targetDay != -1) {
+                        val currentDay = calendar.get(Calendar.DAY_OF_WEEK)
+                        var daysToAdd = targetDay - currentDay
+                        
+                        if (relative == "this") {
+                            if (daysToAdd <= 0) daysToAdd += 7
+                        } else { // next
+                            daysToAdd += 7
                         }
-                    } else null
-                } else null
+                        
+                        calendar.add(Calendar.DAY_OF_YEAR, daysToAdd)
+                        calendar.set(Calendar.HOUR_OF_DAY, 9)
+                        calendar.set(Calendar.MINUTE, 0)
+                        return finalizeReminder(calendar.timeInMillis)
+                    }
+                }
+                
+                null
             }
+        }
+    }
+
+    private fun getMonthInt(monthName: String): Int {
+        return when (monthName) {
+            "january" -> Calendar.JANUARY
+            "february" -> Calendar.FEBRUARY
+            "march" -> Calendar.MARCH
+            "april" -> Calendar.APRIL
+            "may" -> Calendar.MAY
+            "june" -> Calendar.JUNE
+            "july" -> Calendar.JULY
+            "august" -> Calendar.AUGUST
+            "september" -> Calendar.SEPTEMBER
+            "october" -> Calendar.OCTOBER
+            "november" -> Calendar.NOVEMBER
+            "december" -> Calendar.DECEMBER
+            else -> -1
+        }
+    }
+
+    private fun getDayOfWeekInt(dayName: String?): Int {
+        return when (dayName) {
+            "sunday" -> Calendar.SUNDAY
+            "monday" -> Calendar.MONDAY
+            "tuesday" -> Calendar.TUESDAY
+            "wednesday" -> Calendar.WEDNESDAY
+            "thursday" -> Calendar.THURSDAY
+            "friday" -> Calendar.FRIDAY
+            "saturday" -> Calendar.SATURDAY
+            else -> -1
+        }
+    }
+
+    private fun finalizeReminder(eventTime: Long): Long? {
+        val now = System.currentTimeMillis()
+        return when {
+            // If it's a future event (more than 24h away), schedule for 1 day before
+            eventTime > now + 86400000 -> {
+                eventTime - 86400000 // 1 day before
+            }
+            // If it's today or less than 24h away, but still in future
+            eventTime > now -> {
+                // Schedule for 60 seconds from now for demo/testing
+                now + 60000 
+            }
+            else -> null // Truly in the past
         }
     }
 
