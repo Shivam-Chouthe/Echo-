@@ -4,6 +4,11 @@ import java.util.*
 import java.util.regex.Pattern
 
 class EntityExtractor {
+    private val TITLE_STOPWORDS = setOf(
+        "a", "an", "the", "and", "or", "but", "for", "nor", "of", "to",
+        "in", "on", "at", "by", "with", "like", "from", "as", "vs"
+    )
+
     fun extract(text: String): ExtractedEntities {
         val title = extractTitle(text)
         val dateStr = extractDate(text)
@@ -19,7 +24,13 @@ class EntityExtractor {
         
         // Take the first line as a potential title
         var title = lines[0].trim()
-        
+
+        // A raw URL makes a poor title; remove it here and remember the host as a
+        // last-resort name (e.g. a bare "https://github.com/..." share -> "Github").
+        val urlRegex = Regex("https?://[^\\s]+", RegexOption.IGNORE_CASE)
+        val firstUrl = urlRegex.find(title)?.value
+        title = urlRegex.replace(title, "").trim()
+
         // Stop at common delimiters that separate title from details
         val delimiters = listOf(".", ",", "-", "—", " at ", " on ", " starts ", " ends ")
         for (delim in delimiters) {
@@ -43,21 +54,49 @@ class EntityExtractor {
             title = title.replace(Regex(pattern, RegexOption.IGNORE_CASE), "").trim()
         }
         
-        // Strip common locations
-        val locations = listOf("Pune", "Mumbai", "Bangalore", "Delhi", "Hyderabad", "Chennai", "Kolkata", "Koregaon Park", "Baner", "Hinjewadi")
-        for (loc in locations) {
-            title = title.replace(Regex(loc, RegexOption.IGNORE_CASE), "").trim()
-        }
-        
+        // NOTE: locations are intentionally kept in the title ("Places to Visit in Pune"),
+        // location is surfaced separately via extractLocation().
+
         // Strip times like "10 AM", "14:00"
         title = title.replace(Regex("\\d{1,2}(?::\\d{2})?\\s*(?:AM|PM)", RegexOption.IGNORE_CASE), "").trim()
-        
+
         // Strip leading/trailing punctuation and extra spaces
         title = title.replace(Regex("^[^\\w]+|[^\\w]+\$"), "").trim()
         title = title.replace(Regex("\\s+"), " ")
 
-        if (title.isBlank() || title.length < 2) return "Untitled Echo"
+        title = toTitleCase(title)
+        if (title.isBlank() || title.length < 2) {
+            val host = firstUrl?.let { hostToTitle(it) }
+            if (!host.isNullOrBlank()) return host
+            return "Untitled Echo"
+        }
         return if (title.length > 40) title.take(37) + "..." else title
+    }
+
+    /** Turns a URL into a clean human name from its host: "https://notion.so/x" -> "Notion". */
+    private fun hostToTitle(url: String): String? {
+        val host = Regex("https?://([^/\\s]+)", RegexOption.IGNORE_CASE)
+            .find(url)?.groupValues?.get(1)
+            ?.removePrefix("www.") ?: return null
+        val labels = host.split(".").filter { it.isNotBlank() }
+        val name = when {
+            labels.size >= 2 -> labels[labels.size - 2] // domain label before the TLD
+            labels.isNotEmpty() -> labels[0]
+            else -> return null
+        }
+        return name.replaceFirstChar { it.uppercase() }
+    }
+
+    private fun toTitleCase(input: String): String {
+        val words = input.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
+        if (words.isEmpty()) return input
+        return words.mapIndexed { index, word ->
+            // Preserve short acronyms already in caps (AI, USA, ...)
+            if (word.length in 2..5 && word == word.uppercase() && word.any { it.isLetter() }) return@mapIndexed word
+            val lower = word.lowercase()
+            if (index != 0 && lower in TITLE_STOPWORDS) lower
+            else lower.replaceFirstChar { it.uppercase() }
+        }.joinToString(" ")
     }
 
     private fun extractDate(text: String): String? {

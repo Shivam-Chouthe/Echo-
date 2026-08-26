@@ -13,6 +13,7 @@ data class EchoItem(
     val summary: String? = null,
     val action: String? = null, // OPEN_MAPS, SET_REMINDER, ADD_CALENDAR, OPEN_URL, SEARCH, NONE
     val date: String? = null,
+    val time: String? = null,
     val location: String? = null,
     val source: String? = null,
     val createdAt: Long = System.currentTimeMillis(),

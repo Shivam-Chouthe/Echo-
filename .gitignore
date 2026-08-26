@@ -29,3 +29,15 @@ env/
 # ---- OS noise ----
 .DS_Store
 Thumbs.db
+# Secrets — never commit (holds GEMINI_API_KEY)
+local.properties
+
+# Android / Gradle build output
+.gradle/
+build/
+app/build/
+
+# IDE
+.idea/
+*.iml
+.DS_Store

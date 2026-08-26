@@ -49,7 +49,7 @@ class CaptureActivity : ComponentActivity() {
     private val alarmManager by lazy { getSystemService(Context.ALARM_SERVICE) as AlarmManager }
 
     companion object {
-        private const val AI_TIMEOUT_MS = 6_000L
+        private const val AI_TIMEOUT_MS = 10_000L
 
         // Capture/save must complete even after the transparent overlay calls finish(),
         // so it runs on a process-scoped job instead of the Activity's lifecycleScope.
@@ -76,33 +76,64 @@ class CaptureActivity : ComponentActivity() {
     }
 
     private fun handleIntent(intent: Intent?) {
-        if (intent?.action == Intent.ACTION_SEND) {
-            // Log full intent details for debugging Instagram/YouTube/Social shares
-            Log.d("EchoCapture", "INTENT_DEBUG: Action=${intent.action}, Type=${intent.type}")
-            intent.extras?.let { extras ->
-                for (key in extras.keySet()) {
-                    Log.d("EchoCapture", "INTENT_DEBUG: Extra[$key] = ${extras.get(key)}")
-                }
-            }
+        if (intent?.action != Intent.ACTION_SEND) return
 
-            val text = intent.getStringExtra(Intent.EXTRA_TEXT)
-            val stream = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
-            
-            captureScope.launch {
-                if (text != null) {
-                    // Route text directly to classification (Skips OCR)
-                    val url = extractUrl(text)
-                    saveToDatabase(text, "TEXT", url)
-                } else if (stream != null) {
-                    val extracted = ocrProcessor.extractText(stream)
-                    if (extracted != null && extracted.isNotBlank()) {
-                        saveToDatabase(extracted, "IMAGE", null)
-                    } else {
-                        Toast.makeText(this@CaptureActivity, "No text found in image", Toast.LENGTH_SHORT).show()
-                    }
-                }
+        // Log intent details for debugging YouTube / social / screenshot shares.
+        Log.d("EchoCapture", "INTENT_DEBUG: Action=${intent.action}, Type=${intent.type}")
+        intent.extras?.let { extras ->
+            for (key in extras.keySet()) {
+                Log.d("EchoCapture", "INTENT_DEBUG: Extra[$key] = ${extras.get(key)}")
             }
         }
+
+        val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT)
+        val stream = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+
+        captureScope.launch {
+            val input = buildContentInput(sharedText, stream)
+            if (input == null) {
+                Toast.makeText(this@CaptureActivity, "Nothing to save", Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            processAndSave(input)
+        }
+    }
+
+    /**
+     * Normalizes a share into a single ContentInput (one share = one intention).
+     * Text/URL/YouTube skip OCR; images run ML Kit OCR first. YouTube links are enriched
+     * (best-effort) with the video title so the AI/rules layer has real context.
+     */
+    private suspend fun buildContentInput(sharedText: String?, stream: Uri?): ContentInput? {
+        if (!sharedText.isNullOrBlank()) {
+            val text = sharedText.trim()
+            val url = extractUrl(text)
+            return when {
+                YouTubeEnricher.isYouTube(url) -> {
+                    val enrichment = YouTubeEnricher.enrich(url!!)
+                    val processing = YouTubeEnricher.buildProcessingText(enrichment, text)
+                    Log.d("EchoCapture", "YOUTUBE share; title=${enrichment.title != null} " +
+                        "desc=${enrichment.description != null} transcript=${enrichment.transcript != null}")
+                    ContentInput(ContentSource.YOUTUBE, rawText = text, processingText = processing, url = url)
+                }
+                url != null -> ContentInput(ContentSource.URL, rawText = text, processingText = text, url = url)
+                else -> ContentInput(ContentSource.TEXT, rawText = text, processingText = text)
+            }
+        }
+
+        if (stream != null) {
+            val extracted = ocrProcessor.extractText(stream)
+            if (extracted.isNullOrBlank()) return null
+            val cleaned = ocrProcessor.cleanOcrText(extracted).ifBlank { extracted }
+            return ContentInput(
+                source = ContentSource.IMAGE,
+                rawText = extracted,
+                processingText = cleaned,
+                url = extractUrl(extracted)
+            )
+        }
+
+        return null
     }
 
     private fun extractUrl(text: String): String? {
@@ -112,15 +143,10 @@ class CaptureActivity : ComponentActivity() {
         return if (matcher.find()) matcher.group(1) else null
     }
 
-    private suspend fun saveToDatabase(content: String, type: String, sourceUrl: String?) {
-        // OCR-noise cleanup is for screenshots only; shared text goes to the classifier as-received (trimmed).
-        val processingContent = if (type == "IMAGE") {
-            ocrProcessor.cleanOcrText(content).ifBlank { content }
-        } else {
-            content.trim()
-        }
+    private suspend fun processAndSave(input: ContentInput) {
+        val processingContent = input.processingText
 
-        // AI Layer Attempt — must never crash or hang the capture flow; any failure/timeout falls back to rules.
+        // AI Layer — must never crash or hang the capture flow; any failure/timeout falls back to rules.
         val aiResult = try {
             withTimeoutOrNull(AI_TIMEOUT_MS) { aiIntentExtractor.extractIntent(processingContent) }
         } catch (e: CancellationException) {
@@ -129,65 +155,79 @@ class CaptureActivity : ComponentActivity() {
             Log.e("EchoCapture", "AI layer threw; falling back to rules", e)
             null
         }
-        
+
+        // Rules remain authoritative for location, date, and reminders.
+        val ruleEntities = entityExtractor.extract(processingContent)
+
         val finalCategory: String
         val finalTitle: String
         val finalIntent: String
         val finalLocation: String?
         val finalDate: String?
+        val finalTime: String?
         val finalSummary: String?
         val finalAction: String?
         val finalReminderAt: Long?
         val isAiRefined: Boolean
 
         if (aiResult != null) {
+            // AI is authoritative for the descriptive fields.
             finalCategory = aiResult.category
             finalTitle = aiResult.title
             finalIntent = aiResult.intent
             finalSummary = aiResult.summary
             finalAction = aiResult.action
-            isAiRefined = true
-            
-            // Rules remain authoritative for location and date/reminders as per requirements
-            val ruleEntities = entityExtractor.extract(processingContent)
+            // Deterministic entities win for location/date/reminders (prevents hallucinated reminders).
             finalLocation = aiResult.location ?: ruleEntities.location
             finalDate = aiResult.date ?: ruleEntities.date
+            finalTime = aiResult.time
             finalReminderAt = ruleEntities.reminderAt
+            isAiRefined = true
         } else {
-            // Fallback to rules
+            // Guaranteed deterministic fallback.
             val categoryInfo = categorizer.categorize(processingContent)
-            val entities = entityExtractor.extract(processingContent)
-            
             finalCategory = categoryInfo.category
-            finalTitle = entities.title
+            finalTitle = ruleEntities.title
             finalIntent = categoryInfo.intent
-            finalLocation = entities.location
-            finalDate = entities.date
+            finalLocation = ruleEntities.location
+            finalDate = ruleEntities.date
+            finalTime = null
             finalSummary = null
             finalAction = null
-            finalReminderAt = entities.reminderAt
+            finalReminderAt = ruleEntities.reminderAt
             isAiRefined = false
         }
 
+        // Bare-URL safety net (fallback chain, final level): a shared link that produced no
+        // usable entities and no meaningful category is still saved as an openable item
+        // (category OTHER / action OPEN_URL) rather than a dead, empty card.
+        val hasEntities = finalDate != null || finalLocation != null
+        val unclassified = finalCategory == "OTHER" || finalCategory == "NOTE"
+        val bareUrlFallback = input.url != null && !hasEntities && unclassified
+        val savedCategory = if (bareUrlFallback) "OTHER" else finalCategory
+        val savedAction = if (bareUrlFallback) "OPEN_URL" else finalAction
+        if (bareUrlFallback) Log.d("EchoCapture", "Bare-URL fallback → OTHER/OPEN_URL for ${input.source}")
+
         val item = EchoItem(
-            rawText = content,
+            rawText = input.rawText,
             title = finalTitle,
-            category = finalCategory,
+            category = savedCategory,
             intent = finalIntent,
             summary = finalSummary,
-            action = finalAction,
+            action = savedAction,
             date = finalDate,
+            time = finalTime,
             location = finalLocation,
             reminderAt = finalReminderAt,
-            sourceType = type,
+            sourceType = input.source.name,
             source = null,
-            sourceUrl = sourceUrl ?: aiResult?.url,
+            sourceUrl = input.url ?: aiResult?.url,
             isAiRefined = isAiRefined
         )
-        
+
         val id = database.echoDao().insert(item)
-        Log.d("EchoCapture", "SCHEDULER: Saved ${finalCategory} with ID: $id (AI: $isAiRefined)")
-        
+        Log.d("EchoCapture", "SAVED $finalCategory/$finalIntent id=$id (AI=$isAiRefined, src=${input.source})")
+
         finalReminderAt?.let { reminderTime ->
             if (reminderTime > System.currentTimeMillis()) {
                 scheduleAlarm(id.toInt(), reminderTime)
