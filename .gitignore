@@ -1,0 +1,31 @@
+# ---- Secrets — never commit these ----
+local.properties
+.env
+*.env
+backend/.env
+!*.env.example
+
+# ---- Android / Gradle ----
+*.iml
+.gradle/
+build/
+app/build/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# ---- Android Studio / IntelliJ ----
+.idea/
+*.hprof
+
+# ---- Python (backend) ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+
+# ---- OS noise ----
+.DS_Store
+Thumbs.db
