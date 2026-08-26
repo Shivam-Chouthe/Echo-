@@ -174,6 +174,7 @@ fun DashboardScreen(viewModel: EchoViewModel = viewModel(), onEchoClick: (Int) -
 
 @Composable
 fun EchoCard(echo: EchoItem, onDelete: () -> Unit, onClick: () -> Unit) {
+    val context = LocalContext.current
     val isDone = echo.status == "DONE"
     val cardAlpha = if (isDone) 0.6f else 1.0f
     
@@ -243,18 +244,19 @@ fun EchoCard(echo: EchoItem, onDelete: () -> Unit, onClick: () -> Unit) {
                 )
             }
             
-            if (echo.date != null || echo.location != null) {
+            val dateTimeLabel = listOfNotNull(echo.date, echo.time).joinToString(" · ")
+            if (dateTimeLabel.isNotEmpty() || echo.location != null) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (echo.date != null) {
+                    if (dateTimeLabel.isNotEmpty()) {
                         Icon(
                             imageVector = Icons.Default.Event,
-                            contentDescription = "Date",
+                            contentDescription = "Date and time",
                             modifier = Modifier.size(14.dp),
                             tint = PrimaryGreen
                         )
                         Text(
-                            text = echo.date,
+                            text = dateTimeLabel,
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.padding(start = 4.dp, end = 12.dp)
                         )
@@ -314,8 +316,25 @@ fun EchoCard(echo: EchoItem, onDelete: () -> Unit, onClick: () -> Unit) {
             
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                if (echo.sourceUrl != null) {
+                    TextButton(onClick = { openUrl(context, echo.sourceUrl) }) {
+                        Icon(
+                            imageVector = Icons.Default.Language,
+                            contentDescription = "Open Link",
+                            tint = PrimaryGreen,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Open Link",
+                            color = PrimaryGreen,
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
+                }
                 IconButton(onClick = onDelete) {
                     Icon(
                         imageVector = Icons.Default.Delete,
@@ -384,8 +403,14 @@ fun EchoDetailScreen(echoId: Int, viewModel: EchoViewModel = viewModel(), onBack
                 
                 Spacer(modifier = Modifier.height(24.dp))
                 
-                if (echo.date != null) {
-                    DetailItem(icon = Icons.Default.Event, label = "Date", value = echo.date)
+                val dateTimeValue = listOfNotNull(echo.date, echo.time).joinToString(" · ")
+                if (dateTimeValue.isNotEmpty()) {
+                    val dateTimeLabel = when {
+                        echo.date != null && echo.time != null -> "Date & time"
+                        echo.date != null -> "Date"
+                        else -> "Time"
+                    }
+                    DetailItem(icon = Icons.Default.Event, label = dateTimeLabel, value = dateTimeValue)
                 }
                 if (echo.location != null) {
                     DetailItem(icon = Icons.Default.Place, label = "Location", value = echo.location)
@@ -504,6 +529,13 @@ fun EchoDetailScreen(echoId: Int, viewModel: EchoViewModel = viewModel(), onBack
                         }
                     }
                     else -> {
+                        if (echo.sourceUrl != null) {
+                            ActionButton(
+                                text = "Open Link",
+                                icon = Icons.Default.Language,
+                                onClick = { openUrl(context, echo.sourceUrl) }
+                            )
+                        }
                         ActionButton(
                             text = "Copy to Clipboard",
                             icon = Icons.Default.ContentCopy,

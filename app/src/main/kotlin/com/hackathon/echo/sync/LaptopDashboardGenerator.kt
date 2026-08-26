@@ -148,8 +148,9 @@ class LaptopDashboardGenerator {
         }
         
         val entities = StringBuilder()
-        if (echo.date != null) {
-            entities.append("""<div class="entity-row"><span class="entity-icon">📅</span> <span>${echo.date}</span></div>""")
+        val dateTime = listOfNotNull(echo.date, echo.time).joinToString(" · ")
+        if (dateTime.isNotEmpty()) {
+            entities.append("""<div class="entity-row"><span class="entity-icon">📅</span> <span>$dateTime</span></div>""")
         }
         if (echo.location != null) {
             entities.append("""<div class="entity-row"><span class="entity-icon">📍</span> <span>${echo.location}</span></div>""")
