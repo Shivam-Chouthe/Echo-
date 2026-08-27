@@ -4,7 +4,7 @@
             "outputFile": "com.hackathon.echo.app-mergeDebugResources-69:/values-v24/values-v24.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\Saurav\\.gradle\\caches\\8.13\\transforms\\8f162874ab989bee9753e74345f27b49\\transformed\\material-1.14.0\\res\\values-v24\\values-v24.xml",
+                    "source": "C:\\Users\\shiva\\.gradle\\caches\\8.13\\transforms\\8f162874ab989bee9753e74345f27b49\\transformed\\material-1.14.0\\res\\values-v24\\values-v24.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,12,18,24,30,33,36,39,42",
                         "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4",
@@ -23,7 +23,7 @@
                     }
                 },
                 {
-                    "source": "C:\\Users\\Saurav\\.gradle\\caches\\8.13\\transforms\\0e7ec967abcf5eb0205a71ab48c0459b\\transformed\\appcompat-1.7.0\\res\\values-v24\\values-v24.xml",
+                    "source": "C:\\Users\\shiva\\.gradle\\caches\\8.13\\transforms\\0e7ec967abcf5eb0205a71ab48c0459b\\transformed\\appcompat-1.7.0\\res\\values-v24\\values-v24.xml",
                     "from": {
                         "startLines": "2,3",
                         "startColumns": "4,4",
